@@ -76,6 +76,13 @@ require_command() {
   fi
 }
 
+print_banner() {
+  printf '%s\n' \
+    '============================================================' \
+    '  HermesUnchained - Customized by xDweeb' \
+    '============================================================'
+}
+
 install_service() {
   local dry_run="false" rendered_root rendered_unit temp_file
   if [[ "${1:-}" == "--dry-run" ]]; then
@@ -232,6 +239,7 @@ start_services() {
     exit 2
   fi
 
+  print_banner
   local prompt="$1" hermes_agent_bin
   shift
   require_command hermes-agent
@@ -254,6 +262,7 @@ start_chat() {
     exit 1
   fi
 
+  print_banner
   local hermes_bin
   require_command hermes
   prepare_agent_runtime
@@ -267,6 +276,7 @@ start_chat() {
 }
 
 run_bridge() {
+  print_banner
   require_command docker
   require_command curl
   validate_config
@@ -332,6 +342,7 @@ case "$command" in
   chat) start_chat "$@" ;;
   bridge) run_bridge ;;
   start-omniroute)
+    print_banner
     require_command docker
     require_command curl
     validate_config

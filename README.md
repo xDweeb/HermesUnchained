@@ -1,12 +1,16 @@
 # HermesUnchained
 
+### Production-ready isolated AI and data-analysis environment powered by OmniRoute
+
+Maintained by **Taibi El Yakouti ([@xDweeb](https://github.com/xDweeb))**.
+
 [![CI](https://github.com/xDweeb/HermesUnchained/actions/workflows/ci.yml/badge.svg)](https://github.com/xDweeb/HermesUnchained/actions/workflows/ci.yml)
 [![License](https://img.shields.io/github/license/xDweeb/HermesUnchained)](LICENSE)
 [![Docker Pulls](https://img.shields.io/docker/pulls/diegosouzapw/omniroute?logo=docker)](https://hub.docker.com/r/diegosouzapw/omniroute)
 [![Architecture](https://img.shields.io/badge/Architecture-local--first-7C3AED)](#architecture)
 [![Shell](https://img.shields.io/badge/Shell-Bash-4EAA25?logo=gnubash&logoColor=white)](scripts/ops/hermes-unchained)
 
-HermesUnchained is an isolated, local-first bridge between
+HermesUnchained is a production-ready, isolated AI and data-analysis environment bridging
 [Hermes Agent](https://github.com/NousResearch/hermes-agent) and
 [OmniRoute](https://github.com/diegosouzapw/OmniRoute). It provides one command for lifecycle
 management, health checks, logs, upgrades, and an OpenAI-compatible local gateway—without
