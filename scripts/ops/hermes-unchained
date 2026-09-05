@@ -221,7 +221,9 @@ prepare_agent_runtime() {
   export XDG_DATA_HOME="$HERMES_HOME_DIR/.local/share"
   export OPENAI_BASE_URL="$BASE_URL"
   export OPENAI_API_KEY="$DUMMY_KEY"
+  export CUSTOM_BASE_URL="$BASE_URL"
   export HERMES_INFERENCE_MODEL="$DEFAULT_MODEL"
+  export HERMES_INFERENCE_PROVIDER="custom"
 }
 
 start_services() {
@@ -259,7 +261,9 @@ start_chat() {
 
   echo "$BASHPID" >"$PID_FILE"
   echo "Launching interactive Hermes chat with model '$DEFAULT_MODEL' through $BASE_URL"
-  exec "$hermes_bin" chat --model="$HERMES_INFERENCE_MODEL" "$@"
+  exec "$hermes_bin" chat "$@" \
+    --provider=custom \
+    --model="$HERMES_INFERENCE_MODEL"
 }
 
 run_bridge() {
