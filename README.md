@@ -114,6 +114,36 @@ make start
 Provider configuration is available from the local dashboard, normally at
 <http://localhost:20128>. Runtime data remains under `data/` and is never committed.
 
+## Background service
+
+On Linux systems with a user systemd session, HermesUnchained can run as a supervised
+background service. Install and enable the unit from the repository checkout:
+
+```bash
+make service-install
+make service-start
+```
+
+The generated unit contains the checkout's absolute path and is installed at
+`~/.config/systemd/user/hermes-unchained.service`. It runs the foreground Hermes process under
+systemd, restarts it after failures, and stops both Hermes and OmniRoute during a normal service
+shutdown.
+
+Use the Makefile shortcuts for routine management:
+
+```bash
+make service-stop       # Stop Hermes and OmniRoute
+make service-start      # Start them in the background
+make service-logs       # Follow logs from the user journal
+systemctl --user status hermes-unchained.service
+```
+
+To preview the rendered unit without installing it, run:
+
+```bash
+./bin/hermes-unchained install-service --dry-run
+```
+
 ## Security model
 
 - The gateway port binds only to `127.0.0.1`.

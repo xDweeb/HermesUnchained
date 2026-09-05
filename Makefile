@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 
-.PHONY: help setup start stop status logs clean
+.PHONY: help setup start stop status logs clean service-install service-start service-stop service-logs
 
 CLI := ./bin/hermes-unchained
 
@@ -12,7 +12,11 @@ help:
 	  '  make stop    Stop Hermes and OmniRoute' \
 	  '  make status  Show runtime status' \
 	  '  make logs    Stream OmniRoute logs' \
-	  '  make clean   Remove runtime container (preserves data)'
+	  '  make clean   Remove runtime container (preserves data)' \
+	  '  make service-install  Install and enable the user systemd service' \
+	  '  make service-start    Start the background service' \
+	  '  make service-stop     Stop the background service' \
+	  '  make service-logs     Follow background service logs'
 
 setup:
 	@test -f .env || cp .env.example .env
@@ -36,3 +40,15 @@ logs:
 
 clean:
 	@$(CLI) clean
+
+service-install:
+	@$(CLI) install-service
+
+service-start:
+	@systemctl --user start hermes-unchained.service
+
+service-stop:
+	@systemctl --user stop hermes-unchained.service
+
+service-logs:
+	@journalctl --user --unit hermes-unchained.service --follow

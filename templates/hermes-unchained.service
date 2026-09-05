@@ -1,0 +1,17 @@
+[Unit]
+Description=HermesUnchained local AI bridge
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory={{WORKING_DIR}}
+Environment="PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin"
+ExecStart="{{WORKING_DIR}}/bin/hermes-unchained" start
+ExecStop="{{WORKING_DIR}}/bin/hermes-unchained" stop
+Restart=on-failure
+RestartSec=5s
+TimeoutStopSec=60s
+
+[Install]
+WantedBy=default.target

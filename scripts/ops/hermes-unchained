@@ -14,6 +14,10 @@ CONTAINER_NAME="hermes-unchained-omniroute"
 OMNIROUTE_IMAGE="docker.io/diegosouzapw/omniroute:latest"
 RUNTIME_DIR="$PROJECT_ROOT/.runtime"
 PID_FILE="$RUNTIME_DIR/hermes.pid"
+SERVICE_NAME="hermes-unchained.service"
+SERVICE_TEMPLATE="$PROJECT_ROOT/templates/$SERVICE_NAME"
+USER_SERVICE_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
+USER_SERVICE_FILE="$USER_SERVICE_DIR/$SERVICE_NAME"
 
 if [[ -f "$ENV_FILE" ]]; then
   set -a
@@ -49,6 +53,8 @@ Commands:
   logs [DOCKER_ARGS...]   Stream OmniRoute logs
   update                  Pull the latest OmniRoute image
   clean                   Stop and remove runtime containers (preserves data/)
+  install-service [--dry-run]
+                          Install and enable the user-level systemd service
 
 Flags:
   -h, --help              Show this help
@@ -61,6 +67,44 @@ require_command() {
     echo "Error: required command '$1' is not installed or not on PATH." >&2
     exit 1
   fi
+}
+
+install_service() {
+  local dry_run="false" rendered_root rendered_unit temp_file
+  if [[ "${1:-}" == "--dry-run" ]]; then
+    dry_run="true"
+    shift
+  fi
+  if (($#)); then
+    echo "Error: install-service only accepts --dry-run." >&2
+    exit 2
+  fi
+
+  require_command systemctl
+  [[ -f "$SERVICE_TEMPLATE" ]] || {
+    echo "Error: systemd template not found at $SERVICE_TEMPLATE." >&2
+    exit 1
+  }
+
+  rendered_root="${PROJECT_ROOT//\\/\\\\}"
+  rendered_root="${rendered_root//\"/\\\"}"
+  rendered_unit="$(<"$SERVICE_TEMPLATE")"
+  rendered_unit="${rendered_unit//\{\{WORKING_DIR\}\}/$rendered_root}"
+
+  if [[ "$dry_run" == "true" ]]; then
+    printf '%s\n' "$rendered_unit"
+    return 0
+  fi
+
+  mkdir -p "$USER_SERVICE_DIR"
+  temp_file="$(mktemp "$USER_SERVICE_DIR/.hermes-unchained.service.XXXXXX")"
+  printf '%s\n' "$rendered_unit" >"$temp_file"
+  chmod 0644 "$temp_file"
+  mv -f -- "$temp_file" "$USER_SERVICE_FILE"
+  systemctl --user daemon-reload
+  systemctl --user enable "$SERVICE_NAME"
+  echo "Installed and enabled $USER_SERVICE_FILE"
+  echo "Start it with: systemctl --user start $SERVICE_NAME"
 }
 
 validate_config() {
@@ -219,6 +263,7 @@ case "$command" in
   status) show_status ;;
   logs) require_command docker; exec docker logs --follow "$@" "$CONTAINER_NAME" ;;
   update) require_command docker; exec docker pull "$OMNIROUTE_IMAGE" ;;
+  install-service) install_service "$@" ;;
   clean)
     stop_services
     docker rm "$CONTAINER_NAME" >/dev/null 2>&1 || true
