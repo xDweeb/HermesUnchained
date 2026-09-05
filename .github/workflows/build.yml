@@ -7,7 +7,7 @@ name: Build App
 # PR red while producing an artefact nothing downloads. The bundle is validated where a
 # build actually fits:
 #   - main:       ci.yml `Build` (self-hosted omni-build pool) on every merge
-#   - release/**: nightly-release-green.yml (same pool, continuous)
+#   - release/**: validated by the dedicated compatibility and test workflows
 # Dispatch this workflow by hand when a hosted build artefact is genuinely needed.
 on:
   workflow_dispatch:

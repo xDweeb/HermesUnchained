@@ -4,7 +4,7 @@ name: DAST smoke (PR)
 # release/v3.8.51 (VM shutdown ~7 min in, before the server even starts), and because the
 # job is continue-on-error the result was a permanently red advisory check on every
 # release PR — noise, not signal. DAST coverage for release/** lives on the nightly rail
-# (nightly-schemathesis.yml, nightly-llm-security.yml); dispatch this workflow by hand
+# (nightly-schemathesis.yml); dispatch this workflow by hand
 # to smoke a release branch on demand.
 on:
   workflow_dispatch:
@@ -20,7 +20,7 @@ permissions:
   contents: read
 
 # Superseded runs on the same PR must not stack 25-minute advisory builds
-# (force-push storms were holding 2-3 runners each). Same group rule as quality.yml.
+# (force-push storms were holding 2-3 runners each).
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
