@@ -67,6 +67,7 @@ say() { echo "[janitor] $*"; }
 LSOF_BIN="${JANITOR_LSOF:-lsof}"
 have_busy_tools() { command -v "$LSOF_BIN" >/dev/null 2>&1; }
 SNAP=""
+# shellcheck disable=SC2329 # Invoked indirectly by the EXIT trap below.
 cleanup() { [ -n "$SNAP" ] && rm -f -- "$SNAP"; }
 trap cleanup EXIT
 # One lsof for the whole run (~13 s / 83k lines on the box), kept ONLY for the

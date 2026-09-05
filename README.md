@@ -1,5 +1,6 @@
 # HermesUnchained
 
+[![CI](https://github.com/xDweeb/HermesUnchained/actions/workflows/ci.yml/badge.svg)](https://github.com/xDweeb/HermesUnchained/actions/workflows/ci.yml)
 [![License](https://img.shields.io/github/license/xDweeb/HermesUnchained)](LICENSE)
 [![Docker Pulls](https://img.shields.io/docker/pulls/diegosouzapw/omniroute?logo=docker)](https://hub.docker.com/r/diegosouzapw/omniroute)
 [![Architecture](https://img.shields.io/badge/Architecture-local--first-7C3AED)](#architecture)
@@ -64,17 +65,17 @@ Pass additional options to Hermes after `start`:
 
 ## CLI reference
 
-| Command | Description |
-| --- | --- |
-| `start [ARGS...]` | Start OmniRoute, wait for health, and launch Hermes with optional arguments. |
-| `stop` | Send `TERM` to the managed Hermes process, then gracefully stop OmniRoute. |
-| `restart [ARGS...]` | Stop both services and launch them again. |
-| `status` | Show container health, API reachability, active model, and isolated home path. |
-| `logs [ARGS...]` | Follow OmniRoute logs; extra arguments are passed to `docker logs`. |
-| `update` | Pull the latest official OmniRoute image. |
-| `clean` | Remove the runtime container and PID state while preserving `data/`. |
-| `--help` | Display command help. |
-| `--version` | Display the HermesUnchained version. |
+| Command             | Description                                                                    |
+| ------------------- | ------------------------------------------------------------------------------ |
+| `start [ARGS...]`   | Start OmniRoute, wait for health, and launch Hermes with optional arguments.   |
+| `stop`              | Send `TERM` to the managed Hermes process, then gracefully stop OmniRoute.     |
+| `restart [ARGS...]` | Stop both services and launch them again.                                      |
+| `status`            | Show container health, API reachability, active model, and isolated home path. |
+| `logs [ARGS...]`    | Follow OmniRoute logs; extra arguments are passed to `docker logs`.            |
+| `update`            | Pull the latest official OmniRoute image.                                      |
+| `clean`             | Remove the runtime container and PID state while preserving `data/`.           |
+| `--help`            | Display command help.                                                          |
+| `--version`         | Display the HermesUnchained version.                                           |
 
 The Makefile exposes the common workflow through `make setup`, `make start`, `make stop`,
 `make status`, `make logs`, and `make clean`.
@@ -83,12 +84,12 @@ The Makefile exposes the common workflow through `make setup`, `make start`, `ma
 
 Copy `.env.example` to `.env` and edit the local values. `.env` is ignored by Git.
 
-| Variable | Default | Purpose |
-| --- | --- | --- |
-| `OMNIROUTE_PORT` | `20128` | Loopback port for the dashboard and `/v1` API. |
-| `DEFAULT_MODEL` | `auto` | Model or OmniRoute strategy passed to Hermes. |
-| `HERMES_HOME_DIR` | `.hermes-home` | Isolated Hermes state directory; relative paths resolve from this repository. |
-| `DUMMY_KEY` | `sk-dummy` | Placeholder key sent to the local gateway. Never use a real provider key here. |
+| Variable          | Default        | Purpose                                                                        |
+| ----------------- | -------------- | ------------------------------------------------------------------------------ |
+| `OMNIROUTE_PORT`  | `20128`        | Loopback port for the dashboard and `/v1` API.                                 |
+| `DEFAULT_MODEL`   | `auto`         | Model or OmniRoute strategy passed to Hermes.                                  |
+| `HERMES_HOME_DIR` | `.hermes-home` | Isolated Hermes state directory; relative paths resolve from this repository.  |
+| `DUMMY_KEY`       | `sk-dummy`     | Placeholder key sent to the local gateway. Never use a real provider key here. |
 
 The launcher exports `OPENAI_BASE_URL`, `OPENAI_API_KEY`, and `HERMES_INFERENCE_MODEL`, and
 also passes the equivalent explicit arguments to Hermes Agent.
