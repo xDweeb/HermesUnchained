@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 
-.PHONY: help setup start stop status logs clean rotate-logs service-install service-start service-stop service-logs
+.PHONY: help setup start chat stop status logs clean rotate-logs service-install service-start service-stop service-logs
 
 CLI := ./bin/hermes-unchained
 
@@ -8,7 +8,8 @@ help:
 	@printf '%s\n' \
 	  'HermesUnchained commands:' \
 	  '  make setup   Create .env and verify dependencies' \
-	  '  make start   Start OmniRoute and launch Hermes' \
+	  '  make start PROMPT="..."  Run one prompt and exit' \
+	  '  make chat    Start an interactive Hermes chat' \
 	  '  make stop    Stop Hermes and OmniRoute' \
 	  '  make status  Show runtime status' \
 	  '  make logs    Stream OmniRoute logs' \
@@ -25,10 +26,14 @@ setup:
 	@command -v curl >/dev/null
 	@command -v hermes-agent >/dev/null
 	@$(CLI) --version
-	@printf '%s\n' 'Setup complete. Review .env, then run make start.'
+	@printf '%s\n' 'Setup complete. Review .env, then run make chat.'
 
 start:
-	@$(CLI) start
+	@test -n "$$PROMPT" || { printf '%s\n' 'Usage: make start PROMPT="your task"'; exit 2; }
+	@$(CLI) start "$$PROMPT"
+
+chat:
+	@$(CLI) chat
 
 stop:
 	@$(CLI) stop

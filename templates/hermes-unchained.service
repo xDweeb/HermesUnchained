@@ -7,7 +7,7 @@ After=network-online.target
 Type=simple
 WorkingDirectory={{WORKING_DIR}}
 Environment="PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin"
-ExecStart="{{WORKING_DIR}}/bin/hermes-unchained" start
+ExecStart="{{WORKING_DIR}}/bin/hermes-unchained" bridge
 ExecStop="{{WORKING_DIR}}/bin/hermes-unchained" stop
 Restart=on-failure
 RestartSec=5s

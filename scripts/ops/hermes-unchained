@@ -49,10 +49,12 @@ HermesUnchained service manager
 Usage: ./hermes-unchained <command> [options]
 
 Commands:
-  start [HERMES_ARGS...]  Start OmniRoute, wait for health, then launch Hermes
+  start PROMPT [ARGS...]  Run one explicit prompt and exit
+  chat [HERMES_ARGS...]   Start an interactive, persistent Hermes chat
+  bridge                  Run the OmniRoute bridge in the foreground
   start-omniroute         Start only OmniRoute and wait for health
   stop                    Gracefully stop Hermes and OmniRoute
-  restart [HERMES_ARGS...] Stop and start all services
+  restart PROMPT [ARGS...] Stop services, run one explicit prompt, and exit
   status                  Show service health, API reachability, and configuration
   logs [DOCKER_ARGS...]   Stream OmniRoute logs
   update                  Pull the latest OmniRoute image
@@ -165,7 +167,8 @@ hermes_running() {
   [[ "$pid" =~ ^[0-9]+$ ]] || return 1
   kill -0 "$pid" 2>/dev/null || return 1
   command_line="$(ps -p "$pid" -o command= 2>/dev/null || true)"
-  [[ "$command_line" == *"run_agent.py"* || "$command_line" == *"hermes-agent"* ]]
+  [[ "$command_line" == *"run_agent.py"* || "$command_line" == *"hermes-agent"* ||
+    "$command_line" == *"/hermes-agent/hermes"* ]]
 }
 
 start_omniroute() {
@@ -198,10 +201,9 @@ wait_for_health() {
   return 1
 }
 
-start_services() {
+prepare_agent_runtime() {
   require_command docker
   require_command curl
-  require_command hermes-agent
   validate_config
 
   if hermes_running; then
@@ -212,8 +214,6 @@ start_services() {
   start_omniroute
   wait_for_health
 
-  local hermes_agent_bin
-  hermes_agent_bin="$(command -v hermes-agent)"
   mkdir -p "$HERMES_HOME_DIR" "$RUNTIME_DIR"
   export HOME="$HERMES_HOME_DIR"
   export XDG_CONFIG_HOME="$HERMES_HOME_DIR/.config"
@@ -222,14 +222,55 @@ start_services() {
   export OPENAI_BASE_URL="$BASE_URL"
   export OPENAI_API_KEY="$DUMMY_KEY"
   export HERMES_INFERENCE_MODEL="$DEFAULT_MODEL"
+}
+
+start_services() {
+  if (($# == 0)); then
+    echo "Error: start requires an explicit prompt; use 'chat' for interactive mode." >&2
+    exit 2
+  fi
+
+  local prompt="$1" hermes_agent_bin
+  shift
+  require_command hermes-agent
+  prepare_agent_runtime
+  hermes_agent_bin="$(command -v hermes-agent)"
 
   echo "$BASHPID" >"$PID_FILE"
-  echo "Launching Hermes with model '$DEFAULT_MODEL' through $BASE_URL"
+  echo "Running one-shot Hermes task with model '$DEFAULT_MODEL' through $BASE_URL"
   exec "$hermes_agent_bin" \
     --base_url="$OPENAI_BASE_URL" \
     --api_key="$OPENAI_API_KEY" \
     --model="$HERMES_INFERENCE_MODEL" \
+    --query="$prompt" \
     "$@"
+}
+
+start_chat() {
+  if [[ ! -t 0 || ! -t 1 ]]; then
+    echo "Error: chat requires an interactive terminal." >&2
+    exit 1
+  fi
+
+  local hermes_bin
+  require_command hermes
+  prepare_agent_runtime
+  hermes_bin="$(command -v hermes)"
+
+  echo "$BASHPID" >"$PID_FILE"
+  echo "Launching interactive Hermes chat with model '$DEFAULT_MODEL' through $BASE_URL"
+  exec "$hermes_bin" chat --model="$HERMES_INFERENCE_MODEL" "$@"
+}
+
+run_bridge() {
+  require_command docker
+  require_command curl
+  validate_config
+  start_omniroute
+  wait_for_health
+  echo "HermesUnchained bridge is running at $BASE_URL"
+  docker wait "$CONTAINER_NAME" >/dev/null
+  return 1
 }
 
 stop_services() {
@@ -284,6 +325,8 @@ shift || true
 
 case "$command" in
   start) start_services "$@" ;;
+  chat) start_chat "$@" ;;
+  bridge) run_bridge ;;
   start-omniroute)
     require_command docker
     require_command curl

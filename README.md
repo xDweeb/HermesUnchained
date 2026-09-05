@@ -44,40 +44,43 @@ repository-local home directory, so `~/.hermes` remains independent.
 git clone https://github.com/xDweeb/HermesUnchained.git
 cd HermesUnchained
 make setup
-make start
+make chat
 ```
 
 `make setup` creates an ignored `.env` from `.env.example`. On start, the manager launches
 the dedicated OmniRoute container, retries its health endpoint for up to 60 seconds, and only
-then starts Hermes Agent.
+then starts Hermes Agent in its native interactive chat mode.
 
 You can also use the CLI directly:
 
 ```bash
-./bin/hermes-unchained start
+./bin/hermes-unchained chat
 ```
 
-Pass additional options to Hermes after `start`:
+Use `start` with an explicit prompt for a one-shot task:
 
 ```bash
-./bin/hermes-unchained start --max_turns=20
+./bin/hermes-unchained start "Summarize this repository"
+make start PROMPT="Summarize this repository"
 ```
 
 ## CLI reference
 
-| Command             | Description                                                                    |
-| ------------------- | ------------------------------------------------------------------------------ |
-| `start [ARGS...]`   | Start OmniRoute, wait for health, and launch Hermes with optional arguments.   |
-| `stop`              | Send `TERM` to the managed Hermes process, then gracefully stop OmniRoute.     |
-| `restart [ARGS...]` | Stop both services and launch them again.                                      |
-| `status`            | Show container health, API reachability, active model, and isolated home path. |
-| `logs [ARGS...]`    | Follow OmniRoute logs; extra arguments are passed to `docker logs`.            |
-| `update`            | Pull the latest official OmniRoute image.                                      |
-| `clean`             | Remove the runtime container and PID state while preserving `data/`.           |
-| `--help`            | Display command help.                                                          |
-| `--version`         | Display the HermesUnchained version.                                           |
+| Command                    | Description                                                                    |
+| -------------------------- | ------------------------------------------------------------------------------ |
+| `start PROMPT [ARGS...]`   | Start OmniRoute, run one explicit prompt, and exit.                            |
+| `chat [ARGS...]`           | Start OmniRoute and open a persistent interactive Hermes conversation.         |
+| `bridge`                   | Run the OmniRoute bridge in the foreground for service supervision.            |
+| `stop`                     | Send `TERM` to the managed Hermes process, then gracefully stop OmniRoute.     |
+| `restart PROMPT [ARGS...]` | Stop both services, run one explicit prompt, and exit.                         |
+| `status`                   | Show container health, API reachability, active model, and isolated home path. |
+| `logs [ARGS...]`           | Follow OmniRoute logs; extra arguments are passed to `docker logs`.            |
+| `update`                   | Pull the latest official OmniRoute image.                                      |
+| `clean`                    | Remove the runtime container and PID state while preserving `data/`.           |
+| `--help`                   | Display command help.                                                          |
+| `--version`                | Display the HermesUnchained version.                                           |
 
-The Makefile exposes the common workflow through `make setup`, `make start`, `make stop`,
+The Makefile exposes the common workflow through `make setup`, `make chat`, `make start`, `make stop`,
 `make status`, `make logs`, and `make clean`.
 
 ## Environment configuration
@@ -108,7 +111,7 @@ make logs
 
 # Restart after an image update
 ./bin/hermes-unchained clean
-make start
+make chat
 ```
 
 Provider configuration is available from the local dashboard, normally at
