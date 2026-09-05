@@ -138,6 +138,17 @@ make service-logs       # Follow logs from the user journal
 systemctl --user status hermes-unchained.service
 ```
 
+Hermes file logs are stored under `.hermes-home/.hermes/logs` by default. Run the maintenance
+command periodically to compress files older than three days and delete files older than 14
+days:
+
+```bash
+make rotate-logs
+```
+
+This command manages Hermes file logs only. Output captured by the background service remains
+subject to the host's systemd-journald retention policy.
+
 To preview the rendered unit without installing it, run:
 
 ```bash

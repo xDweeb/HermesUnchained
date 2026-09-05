@@ -34,6 +34,10 @@ fi
 if [[ "$HERMES_HOME_DIR" != /* ]]; then
   HERMES_HOME_DIR="$PROJECT_ROOT/$HERMES_HOME_DIR"
 fi
+: "${HERMES_LOG_DIR:=$HERMES_HOME_DIR/.hermes/logs}"
+if [[ "$HERMES_LOG_DIR" != /* ]]; then
+  HERMES_LOG_DIR="$PROJECT_ROOT/$HERMES_LOG_DIR"
+fi
 
 BASE_URL="http://localhost:$OMNIROUTE_PORT/v1"
 HEALTH_URL="http://localhost:$OMNIROUTE_PORT/healthz"
@@ -53,6 +57,7 @@ Commands:
   logs [DOCKER_ARGS...]   Stream OmniRoute logs
   update                  Pull the latest OmniRoute image
   clean                   Stop and remove runtime containers (preserves data/)
+  rotate-logs             Compress logs older than 3 days; delete after 14 days
   install-service [--dry-run]
                           Install and enable the user-level systemd service
 
@@ -105,6 +110,34 @@ install_service() {
   systemctl --user enable "$SERVICE_NAME"
   echo "Installed and enabled $USER_SERVICE_FILE"
   echo "Start it with: systemctl --user start $SERVICE_NAME"
+}
+
+rotate_logs() {
+  if (($#)); then
+    echo "Error: rotate-logs does not accept arguments." >&2
+    exit 2
+  fi
+  require_command find
+  require_command gzip
+
+  if [[ ! -d "$HERMES_LOG_DIR" ]]; then
+    echo "No Hermes log directory found at $HERMES_LOG_DIR; nothing to rotate."
+    return 0
+  fi
+
+  local file compressed_count=0 deleted_count=0
+  while IFS= read -r -d '' file; do
+    rm -f -- "$file"
+    ((deleted_count += 1))
+  done < <(find "$HERMES_LOG_DIR" -type f -mmin +20160 -print0)
+
+  while IFS= read -r -d '' file; do
+    gzip -- "$file"
+    ((compressed_count += 1))
+  done < <(find "$HERMES_LOG_DIR" -type f ! -name '*.gz' -mmin +4320 -print0)
+
+  echo "Log rotation complete: compressed $compressed_count, deleted $deleted_count."
+  echo "Log directory: $HERMES_LOG_DIR"
 }
 
 validate_config() {
@@ -263,6 +296,7 @@ case "$command" in
   status) show_status ;;
   logs) require_command docker; exec docker logs --follow "$@" "$CONTAINER_NAME" ;;
   update) require_command docker; exec docker pull "$OMNIROUTE_IMAGE" ;;
+  rotate-logs) rotate_logs "$@" ;;
   install-service) install_service "$@" ;;
   clean)
     stop_services
