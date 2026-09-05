@@ -1,75 +1,124 @@
 # HermesUnchained
 
-This repository runs OmniRoute locally and launches a separate Hermes Agent session against
-its OpenAI-compatible endpoint. The launcher does not edit or reuse the normal
-`~/.hermes` configuration: its runtime home and cache live in `.hermes-home/` inside this
-repository.
+[![License](https://img.shields.io/github/license/xDweeb/HermesUnchained)](LICENSE)
+[![Docker Pulls](https://img.shields.io/docker/pulls/diegosouzapw/omniroute?logo=docker)](https://hub.docker.com/r/diegosouzapw/omniroute)
+[![Architecture](https://img.shields.io/badge/Architecture-local--first-7C3AED)](#architecture)
+[![Shell](https://img.shields.io/badge/Shell-Bash-4EAA25?logo=gnubash&logoColor=white)](scripts/ops/hermes-unchained)
 
-## Requirements
+HermesUnchained is an isolated, local-first bridge between
+[Hermes Agent](https://github.com/NousResearch/hermes-agent) and
+[OmniRoute](https://github.com/diegosouzapw/OmniRoute). It provides one command for lifecycle
+management, health checks, logs, upgrades, and an OpenAI-compatible local gateway—without
+changing the user's normal Hermes configuration.
 
-- Docker with a running Docker daemon
+## Architecture
+
+```text
+┌──────────────┐     OpenAI-compatible API      ┌───────────────────┐
+│ Hermes Agent │ ──────────────────────────────> │ OmniRoute Gateway │
+│ isolated HOME│     localhost:<port>/v1         │ Docker, local-only│
+└──────────────┘                                 └─────────┬─────────┘
+                                                          │ smart routing
+                                                          ▼
+                                              ┌────────────────────────┐
+                                              │ 350+ Free LLM Providers│
+                                              └────────────────────────┘
+```
+
+OmniRoute binds to `127.0.0.1` and persists its state in `data/`. Hermes runs with a
+repository-local home directory, so `~/.hermes` remains independent.
+
+## Quick start
+
+### Requirements
+
+- Linux or macOS with Bash 4+
+- Docker Engine with an accessible daemon
 - `curl`
-- Hermes Agent installed and `hermes-agent` available on `PATH`
+- `hermes-agent` on `PATH`
 
-## Start
+### Install and run
 
-1. Start OmniRoute in the background:
+```bash
+git clone https://github.com/xDweeb/HermesUnchained.git
+cd HermesUnchained
+make setup
+make start
+```
 
-   ```bash
-   ./start-omniroute.sh
-   ```
+`make setup` creates an ignored `.env` from `.env.example`. On start, the manager launches
+the dedicated OmniRoute container, retries its health endpoint for up to 60 seconds, and only
+then starts Hermes Agent.
 
-2. Wait until the dashboard is available at <http://localhost:20128>, then launch Hermes:
+You can also use the CLI directly:
 
-   ```bash
-   ./start-hermes-omni.sh
-   ```
+```bash
+./bin/hermes-unchained start
+```
 
-   Extra Hermes Agent arguments are passed through. For example:
+Pass additional options to Hermes after `start`:
 
-   ```bash
-   ./start-hermes-omni.sh --max_turns=20
-   ```
+```bash
+./bin/hermes-unchained start --max_turns=20
+```
 
-The Hermes launcher uses:
+## CLI reference
 
-- Base URL: `http://localhost:20128/v1`
-- Model: `auto`
-- API key: `sk-dummy` (a local placeholder)
+| Command | Description |
+| --- | --- |
+| `start [ARGS...]` | Start OmniRoute, wait for health, and launch Hermes with optional arguments. |
+| `stop` | Send `TERM` to the managed Hermes process, then gracefully stop OmniRoute. |
+| `restart [ARGS...]` | Stop both services and launch them again. |
+| `status` | Show container health, API reachability, active model, and isolated home path. |
+| `logs [ARGS...]` | Follow OmniRoute logs; extra arguments are passed to `docker logs`. |
+| `update` | Pull the latest official OmniRoute image. |
+| `clean` | Remove the runtime container and PID state while preserving `data/`. |
+| `--help` | Display command help. |
+| `--version` | Display the HermesUnchained version. |
 
-The same values are exported as `OPENAI_BASE_URL`, `HERMES_INFERENCE_MODEL`, and
-`OPENAI_API_KEY`, and are also passed as explicit Hermes Agent arguments.
+The Makefile exposes the common workflow through `make setup`, `make start`, `make stop`,
+`make status`, `make logs`, and `make clean`.
 
-## Configure providers
+## Environment configuration
 
-Open <http://localhost:20128> to configure optional OmniRoute providers. A fresh OmniRoute
-installation also includes its keyless default route. OmniRoute data is persisted under
-`./data/` and is intentionally ignored by Git.
+Copy `.env.example` to `.env` and edit the local values. `.env` is ignored by Git.
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `OMNIROUTE_PORT` | `20128` | Loopback port for the dashboard and `/v1` API. |
+| `DEFAULT_MODEL` | `auto` | Model or OmniRoute strategy passed to Hermes. |
+| `HERMES_HOME_DIR` | `.hermes-home` | Isolated Hermes state directory; relative paths resolve from this repository. |
+| `DUMMY_KEY` | `sk-dummy` | Placeholder key sent to the local gateway. Never use a real provider key here. |
+
+The launcher exports `OPENAI_BASE_URL`, `OPENAI_API_KEY`, and `HERMES_INFERENCE_MODEL`, and
+also passes the equivalent explicit arguments to Hermes Agent.
 
 ## Operations
 
-Check status or logs:
-
 ```bash
-docker ps --filter name=hermes-unchained-omniroute
-docker logs -f hermes-unchained-omniroute
+# Check everything
+make status
+
+# Follow gateway output (Ctrl-C exits the log stream only)
+make logs
+
+# Download the newest OmniRoute image
+./bin/hermes-unchained update
+
+# Restart after an image update
+./bin/hermes-unchained clean
+make start
 ```
 
-Stop the service without deleting its data:
+Provider configuration is available from the local dashboard, normally at
+<http://localhost:20128>. Runtime data remains under `data/` and is never committed.
 
-```bash
-docker stop hermes-unchained-omniroute
-```
+## Security model
 
-Restart it later with `./start-omniroute.sh`.
+- The gateway port binds only to `127.0.0.1`.
+- Hermes uses an isolated `HOME` and XDG directories inside this repository.
+- Real credentials, `.env`, runtime PID files, databases, and Hermes state are Git-ignored.
+- `.env` is sourced as shell configuration; only use a file you trust and control.
 
-## GitHub preparation
-
-The upstream OmniRoute remote is named `upstream`. The public project remote is `origin`:
-
-```bash
-git remote add origin https://github.com/xDweeb/HermesUnchained.git
-git push -u origin HEAD
-```
-
-Do not commit `.hermes-home/`, `data/`, `.env`, credentials, or API keys.
+See [CONTRIBUTING.md](CONTRIBUTING.md) to propose improvements. This project is available
+under the [MIT License](LICENSE).

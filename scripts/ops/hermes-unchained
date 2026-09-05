@@ -1,0 +1,231 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SOURCE_PATH="${BASH_SOURCE[0]}"
+while [[ -h "$SOURCE_PATH" ]]; do
+  SOURCE_DIR="$(cd -P -- "$(dirname -- "$SOURCE_PATH")" && pwd)"
+  SOURCE_PATH="$(readlink "$SOURCE_PATH")"
+  [[ "$SOURCE_PATH" == /* ]] || SOURCE_PATH="$SOURCE_DIR/$SOURCE_PATH"
+done
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$SOURCE_PATH")" && pwd)"
+PROJECT_ROOT="$(cd -- "$SCRIPT_DIR/../.." && pwd)"
+ENV_FILE="$PROJECT_ROOT/.env"
+CONTAINER_NAME="hermes-unchained-omniroute"
+OMNIROUTE_IMAGE="docker.io/diegosouzapw/omniroute:latest"
+RUNTIME_DIR="$PROJECT_ROOT/.runtime"
+PID_FILE="$RUNTIME_DIR/hermes.pid"
+
+if [[ -f "$ENV_FILE" ]]; then
+  set -a
+  # shellcheck disable=SC1090
+  source "$ENV_FILE"
+  set +a
+fi
+
+: "${OMNIROUTE_PORT:=20128}"
+: "${DEFAULT_MODEL:=auto}"
+: "${HERMES_HOME_DIR:=.hermes-home}"
+: "${DUMMY_KEY:=sk-dummy}"
+
+if [[ "$HERMES_HOME_DIR" != /* ]]; then
+  HERMES_HOME_DIR="$PROJECT_ROOT/$HERMES_HOME_DIR"
+fi
+
+BASE_URL="http://localhost:$OMNIROUTE_PORT/v1"
+HEALTH_URL="http://localhost:$OMNIROUTE_PORT/healthz"
+
+usage() {
+  cat <<'EOF'
+HermesUnchained service manager
+
+Usage: ./hermes-unchained <command> [options]
+
+Commands:
+  start [HERMES_ARGS...]  Start OmniRoute, wait for health, then launch Hermes
+  start-omniroute         Start only OmniRoute and wait for health
+  stop                    Gracefully stop Hermes and OmniRoute
+  restart [HERMES_ARGS...] Stop and start all services
+  status                  Show service health, API reachability, and configuration
+  logs [DOCKER_ARGS...]   Stream OmniRoute logs
+  update                  Pull the latest OmniRoute image
+  clean                   Stop and remove runtime containers (preserves data/)
+
+Flags:
+  -h, --help              Show this help
+  -V, --version           Show the HermesUnchained version
+EOF
+}
+
+require_command() {
+  if ! command -v "$1" >/dev/null 2>&1; then
+    echo "Error: required command '$1' is not installed or not on PATH." >&2
+    exit 1
+  fi
+}
+
+validate_config() {
+  if [[ ! "$OMNIROUTE_PORT" =~ ^[0-9]+$ ]] ||
+    ((OMNIROUTE_PORT < 1 || OMNIROUTE_PORT > 65535)); then
+    echo "Error: OMNIROUTE_PORT must be an integer from 1 to 65535." >&2
+    exit 1
+  fi
+  [[ -n "$DEFAULT_MODEL" ]] || { echo "Error: DEFAULT_MODEL cannot be empty." >&2; exit 1; }
+  [[ -n "$DUMMY_KEY" ]] || { echo "Error: DUMMY_KEY cannot be empty." >&2; exit 1; }
+}
+
+container_exists() {
+  docker container inspect "$CONTAINER_NAME" >/dev/null 2>&1
+}
+
+container_running() {
+  [[ "$(docker inspect --format '{{.State.Running}}' "$CONTAINER_NAME" 2>/dev/null || true)" == "true" ]]
+}
+
+hermes_running() {
+  [[ -f "$PID_FILE" ]] || return 1
+  local pid command_line
+  pid="$(<"$PID_FILE")"
+  [[ "$pid" =~ ^[0-9]+$ ]] || return 1
+  kill -0 "$pid" 2>/dev/null || return 1
+  command_line="$(ps -p "$pid" -o command= 2>/dev/null || true)"
+  [[ "$command_line" == *"run_agent.py"* || "$command_line" == *"hermes-agent"* ]]
+}
+
+start_omniroute() {
+  mkdir -p "$PROJECT_ROOT/data"
+  if container_exists; then
+    docker start "$CONTAINER_NAME" >/dev/null
+  else
+    docker run -d \
+      --name "$CONTAINER_NAME" \
+      --restart unless-stopped \
+      --stop-timeout 40 \
+      --publish "127.0.0.1:$OMNIROUTE_PORT:20128" \
+      --volume "$PROJECT_ROOT/data:/app/data" \
+      "$OMNIROUTE_IMAGE" >/dev/null
+  fi
+}
+
+wait_for_health() {
+  local attempt
+  echo "Waiting for OmniRoute at $HEALTH_URL ..."
+  for attempt in {1..30}; do
+    if curl --silent --fail --max-time 2 "$HEALTH_URL" >/dev/null; then
+      echo "OmniRoute is healthy (attempt $attempt/30)."
+      return 0
+    fi
+    sleep 2
+  done
+  echo "Error: OmniRoute did not become healthy within 60 seconds." >&2
+  docker logs --tail 30 "$CONTAINER_NAME" >&2 || true
+  return 1
+}
+
+start_services() {
+  require_command docker
+  require_command curl
+  require_command hermes-agent
+  validate_config
+
+  if hermes_running; then
+    echo "Error: Hermes is already running with PID $(<"$PID_FILE")." >&2
+    exit 1
+  fi
+
+  start_omniroute
+  wait_for_health
+
+  local hermes_agent_bin
+  hermes_agent_bin="$(command -v hermes-agent)"
+  mkdir -p "$HERMES_HOME_DIR" "$RUNTIME_DIR"
+  export HOME="$HERMES_HOME_DIR"
+  export XDG_CONFIG_HOME="$HERMES_HOME_DIR/.config"
+  export XDG_CACHE_HOME="$HERMES_HOME_DIR/.cache"
+  export XDG_DATA_HOME="$HERMES_HOME_DIR/.local/share"
+  export OPENAI_BASE_URL="$BASE_URL"
+  export OPENAI_API_KEY="$DUMMY_KEY"
+  export HERMES_INFERENCE_MODEL="$DEFAULT_MODEL"
+
+  echo "$BASHPID" >"$PID_FILE"
+  echo "Launching Hermes with model '$DEFAULT_MODEL' through $BASE_URL"
+  exec "$hermes_agent_bin" \
+    --base_url="$OPENAI_BASE_URL" \
+    --api_key="$OPENAI_API_KEY" \
+    --model="$HERMES_INFERENCE_MODEL" \
+    "$@"
+}
+
+stop_services() {
+  require_command docker
+  if hermes_running; then
+    local pid
+    pid="$(<"$PID_FILE")"
+    echo "Stopping Hermes (PID $pid) ..."
+    kill -TERM "$pid"
+    for _ in {1..10}; do
+      kill -0 "$pid" 2>/dev/null || break
+      sleep 1
+    done
+  else
+    echo "Hermes is not running."
+  fi
+  rm -f "$PID_FILE"
+
+  if container_running; then
+    echo "Stopping OmniRoute ..."
+    docker stop --time 40 "$CONTAINER_NAME" >/dev/null
+  else
+    echo "OmniRoute is not running."
+  fi
+}
+
+show_status() {
+  require_command docker
+  validate_config
+  local container_state="not created" api_state="unreachable" hermes_state="stopped"
+  if container_exists; then
+    container_state="$(docker inspect --format '{{.State.Status}} (health: {{if .State.Health}}{{.State.Health.Status}}{{else}}n/a{{end}})' "$CONTAINER_NAME")"
+  fi
+  if curl --silent --fail --max-time 2 "$HEALTH_URL" >/dev/null 2>&1; then
+    api_state="reachable"
+  fi
+  if hermes_running; then
+    hermes_state="running (PID $(<"$PID_FILE"))"
+  fi
+
+  printf '%-18s %s\n' \
+    "OmniRoute:" "$container_state" \
+    "API:" "$api_state ($BASE_URL)" \
+    "Hermes:" "$hermes_state" \
+    "Model:" "$DEFAULT_MODEL" \
+    "Hermes home:" "$HERMES_HOME_DIR" \
+    "API key:" "configured (hidden)"
+}
+
+command="${1:---help}"
+shift || true
+
+case "$command" in
+  start) start_services "$@" ;;
+  start-omniroute)
+    require_command docker
+    require_command curl
+    validate_config
+    start_omniroute
+    wait_for_health
+    ;;
+  stop) stop_services ;;
+  restart) stop_services; start_services "$@" ;;
+  status) show_status ;;
+  logs) require_command docker; exec docker logs --follow "$@" "$CONTAINER_NAME" ;;
+  update) require_command docker; exec docker pull "$OMNIROUTE_IMAGE" ;;
+  clean)
+    stop_services
+    docker rm "$CONTAINER_NAME" >/dev/null 2>&1 || true
+    rm -rf "$RUNTIME_DIR"
+    echo "Runtime container and PID state removed; data/ was preserved."
+    ;;
+  -h|--help|help) usage ;;
+  -V|--version) echo "HermesUnchained 1.0.0" ;;
+  *) echo "Error: unknown command '$command'." >&2; usage >&2; exit 2 ;;
+esac
