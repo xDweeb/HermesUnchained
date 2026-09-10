@@ -278,7 +278,7 @@ start_chat() {
 
 claude() {
   print_banner
-  local claude_bin claude_model="openrouter/anthropic/claude-3-5-sonnet-20241022"
+  local claude_bin claude_model="gh/claude-3-5-sonnet-20241022"
   claude_bin="$(type -P claude || true)"
 
   if [[ -z "$claude_bin" ]]; then
