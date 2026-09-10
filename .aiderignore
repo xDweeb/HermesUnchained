@@ -1,0 +1,109 @@
+# Dependencies and package-manager caches
+node_modules/
+.pnpm-store/
+.yarn/
+.npm/
+
+# Python environments and caches
+/env/
+/venv/
+/.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+
+# Build and framework output
+/dist/
+/build/
+/.build/
+/.next/
+/.out/
+/out/
+/target/
+/coverage/
+/.coverage/
+/.nyc_output/
+electron/dist-electron/
+*.tsbuildinfo
+*.map
+
+# Test, benchmark, and generated reports
+/test-results/
+/playwright-report/
+/blob-report/
+/reports/
+/.stryker-tmp/
+stryker-output-*.json
+audit-report.json
+
+# Runtime state, databases, and application data
+/data/
+/.data/
+/.data-dev/
+/.local-data/
+/.hermes-home/
+/.runtime/
+/logs/
+*.log
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+*.sqlite-journal
+
+# Aider and other agent-generated indexes or private workspaces
+/.aider.tags.cache*/
+/.agents/
+/.claude/
+/.gemini/
+/.codex/
+/.codegraph/
+/.gitnexus/
+/.serena/
+/.sisyphus/
+/.superpowers/
+/.worktrees/
+/_*/
+/_*
+
+# Generated, duplicated, or non-source documentation assets
+docs/i18n/
+docs/screenshots/
+docs/assets/
+docs/diagrams/exported/
+/public/
+/images/
+/.source/
+/.i18n-state.json
+
+# Large generated dependency metadata and archives
+package-lock.json
+*.tgz
+*.zip
+*.tar
+*.tar.gz
+
+# Local configuration, secrets, and editor/OS metadata
+.env
+.env.*
+!.env.example
+!.env.*.example
+.idea/
+.vscode/
+.DS_Store
+*.swp
+*.swo
+*~
+
+# Packaged desktop runtime artifacts
+/OmniRoute.exe
+/Uninstall OmniRoute.exe
+/locales/
+/resources/
+/*.pak
+/*.dll
+icudtl.dat
+snapshot_blob.bin
+v8_context_snapshot.bin
