@@ -54,6 +54,7 @@ Commands:
   claude [CLAUDE_ARGS...] Start Claude Code through the local OmniRoute bridge
   aider [AIDER_ARGS...]   Start aider through the local OmniRoute bridge
   setup-ide               Generate the VS Code AI integration guide
+  setup-skills            Generate Aider config and expert skill files
   bridge                  Run the OmniRoute bridge in the foreground
   start-omniroute         Start only OmniRoute and wait for health
   stop                    Gracefully stop Hermes and OmniRoute
@@ -346,8 +347,94 @@ aider() {
   if [[ -n "$context_msg" ]]; then
     aider_args+=(--message "$context_msg")
   fi
+  case "${MODE:-}" in
+    web) aider_args+=(--message-file skills/frontend-expert.md) ;;
+    backend | data) aider_args+=(--message-file skills/backend-expert.md) ;;
+    ctf) aider_args+=(--message-file skills/ctf-expert.md) ;;
+  esac
   echo "Launching aider with openai/auto through $OPENAI_API_BASE"
   exec "$aider_bin" "${aider_args[@]}" "$@"
+}
+
+setup_skills() {
+  mkdir -p "$PROJECT_ROOT/skills"
+
+  cat >"$PROJECT_ROOT/.aider.conf.yml" <<'EOF'
+auto-lint: true
+lint-cmd: "python -m flake8" # fallback for python
+auto-test: true
+map-tokens: 1024
+EOF
+
+  cat >"$PROJECT_ROOT/skills/frontend-expert.md" <<'EOF'
+# Frontend Expert
+
+Act as a senior frontend engineer specializing in React, Vite, TypeScript, Tailwind CSS,
+Astro, and accessible UI/UX design.
+
+- Preserve the repository's existing architecture, conventions, design system, and tooling.
+- Prefer small, typed React components with explicit props, stable state ownership, and clear
+  loading, empty, success, and error states.
+- Use Vite and Astro conventions correctly. Keep browser-only code out of server paths, minimize
+  client-side JavaScript, and choose Astro islands deliberately.
+- Use strict TypeScript types. Avoid `any`, unsafe assertions, and duplicated domain models.
+- Compose Tailwind utilities consistently; preserve responsive behavior and avoid arbitrary
+  values when established design tokens exist.
+- Build accessible interfaces with semantic HTML, keyboard support, visible focus, useful labels,
+  sufficient contrast, and reduced-motion support.
+- Protect performance by limiting rerenders, code-splitting expensive features, optimizing assets,
+  and measuring before introducing complex memoization.
+- Keep layouts responsive across mobile, tablet, and desktop sizes.
+- Add or update focused tests for user-visible behavior and run the relevant lint, typecheck, and
+  test commands after changes.
+EOF
+
+  cat >"$PROJECT_ROOT/skills/backend-expert.md" <<'EOF'
+# Backend Expert
+
+Act as a senior backend and data engineer specializing in Python, FastAPI, Supabase, Pandas,
+Plotly Dash, machine learning workflows, data pipelines, and secure API design.
+
+- Follow the repository's service boundaries and dependency patterns before adding abstractions.
+- Write typed Python with focused modules, explicit validation, deterministic error handling, and
+  structured logs that never expose credentials or sensitive records.
+- Design FastAPI endpoints with validated request and response models, correct HTTP status codes,
+  bounded resource use, cancellation support, and generated schema accuracy.
+- Treat Supabase row-level security as mandatory. Use least-privilege roles, parameterized access,
+  safe migrations, and server-only handling for privileged keys.
+- Build Pandas pipelines with explicit schemas, null handling, vectorized operations, reproducible
+  transformations, and checks for data quality and drift.
+- Keep Plotly Dash callbacks focused and cache expensive computations safely.
+- Version machine-learning inputs and outputs, prevent train/serve skew, and report meaningful
+  evaluation metrics rather than relying on a single score.
+- Secure APIs against injection, broken authorization, SSRF, unsafe deserialization, excessive
+  payloads, and accidental secret or stack-trace disclosure.
+- Add focused tests for success, validation, authorization, and failure paths; run linting,
+  type-checking, and the narrowest relevant test suite.
+EOF
+
+  cat >"$PROJECT_ROOT/skills/ctf-expert.md" <<'EOF'
+# CTF and Cybersecurity Expert
+
+Act as a cybersecurity specialist for authorized CTF challenges, isolated labs, and systems where
+the user has explicit permission to test. Keep all analysis within the stated scope.
+
+- Begin by identifying the target format, architecture, protections, trust boundaries, and likely
+  attack surface. Record assumptions and preserve reproducible evidence.
+- For binary execution analysis, prefer an isolated sandbox; inspect metadata, strings, imports,
+  control flow, syscalls, and runtime behavior before modifying or executing unknown artifacts.
+- Apply static and dynamic reverse-engineering techniques methodically. Explain offsets, calling
+  conventions, memory layouts, encodings, and observed anti-analysis behavior.
+- Inspect network traffic with filters and protocol-aware tools. Reconstruct flows, timelines, DNS,
+  TLS metadata, sessions, and transferred artifacts without exposing unrelated private data.
+- Validate findings with the least invasive technique available and distinguish evidence from
+  hypotheses. Do not claim exploitation or compromise without a reproducible result.
+- Never target third-party systems, persist access, exfiltrate real data, or weaken safeguards
+  outside an explicitly authorized environment.
+- Produce concise notes containing commands, hashes, indicators, findings, and remediation advice.
+EOF
+
+  echo "Aider skills and configuration generated successfully."
 }
 
 setup_ide() {
@@ -487,6 +574,7 @@ case "$command" in
   claude) claude "$@" ;;
   aider) aider "$@" ;;
   setup-ide) setup_ide ;;
+  setup-skills) setup_skills ;;
   bridge) run_bridge ;;
   start-omniroute)
     print_banner
