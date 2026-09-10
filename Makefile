@@ -41,7 +41,7 @@ claude:
 	@$(CLI) claude
 
 aider:
-	@$(CLI) aider
+	@MODE="$(MODE)" $(CLI) aider
 
 stop:
 	@$(CLI) stop

@@ -302,7 +302,8 @@ claude() {
 
 aider() {
   print_banner
-  local aider_bin
+  local aider_bin context_msg=""
+  local -a aider_args=(--model openai/auto)
   aider_bin="$(type -P aider || true)"
 
   if [[ -z "$aider_bin" ]]; then
@@ -323,8 +324,29 @@ aider() {
 
   export OPENAI_API_BASE="http://localhost:20128/v1"
   export OPENAI_API_KEY="sk-dummy"
+  case "${MODE:-}" in
+    ctf)
+      context_msg="System: We are in CTF/Cybersecurity mode. Focus on penetration testing, "
+      context_msg+="reverse engineering, binary execution, and network traffic analysis."
+      ;;
+    web)
+      context_msg="System: We are in Web Development mode. Focus on best practices for React, "
+      context_msg+="Tailwind CSS, Astro, FastAPI, and Supabase."
+      ;;
+    data)
+      context_msg="System: We are in Data Analysis mode. Focus on Python, Pandas, Plotly Dash, "
+      context_msg+="machine learning, and data pipelines."
+      ;;
+    robotics)
+      context_msg="System: We are in Robotics mode. Focus on Arduino, ESP32, PID control "
+      context_msg+="algorithms, and C/C++ hardware logic."
+      ;;
+  esac
+  if [[ -n "$context_msg" ]]; then
+    aider_args+=(--message "$context_msg")
+  fi
   echo "Launching aider with openai/auto through $OPENAI_API_BASE"
-  exec "$aider_bin" --model openai/auto "$@"
+  exec "$aider_bin" "${aider_args[@]}" "$@"
 }
 
 run_bridge() {
