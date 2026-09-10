@@ -51,6 +51,7 @@ Usage: ./hermes-unchained <command> [options]
 Commands:
   start PROMPT [ARGS...]  Run one explicit prompt and exit
   chat [HERMES_ARGS...]   Start an interactive, persistent Hermes chat
+  claude [CLAUDE_ARGS...] Start Claude Code through the local OmniRoute bridge
   bridge                  Run the OmniRoute bridge in the foreground
   start-omniroute         Start only OmniRoute and wait for health
   stop                    Gracefully stop Hermes and OmniRoute
@@ -275,6 +276,29 @@ start_chat() {
     --model="$HERMES_INFERENCE_MODEL"
 }
 
+claude() {
+  print_banner
+  local claude_bin
+  claude_bin="$(type -P claude || true)"
+
+  if [[ -z "$claude_bin" ]]; then
+    require_command npm
+    echo "Claude Code CLI not found. Installing @anthropic-ai/claude-code globally ..."
+    npm install -g @anthropic-ai/claude-code
+    claude_bin="$(type -P claude || true)"
+  fi
+
+  if [[ -z "$claude_bin" ]]; then
+    echo "Error: Claude Code CLI installation completed, but 'claude' is not on PATH." >&2
+    exit 1
+  fi
+
+  export ANTHROPIC_BASE_URL="http://localhost:20128/v1"
+  export ANTHROPIC_API_KEY="sk-dummy"
+  echo "Launching Claude Code through $ANTHROPIC_BASE_URL"
+  exec "$claude_bin" "$@"
+}
+
 run_bridge() {
   print_banner
   require_command docker
@@ -340,6 +364,7 @@ shift || true
 case "$command" in
   start) start_services "$@" ;;
   chat) start_chat "$@" ;;
+  claude) claude "$@" ;;
   bridge) run_bridge ;;
   start-omniroute)
     print_banner
