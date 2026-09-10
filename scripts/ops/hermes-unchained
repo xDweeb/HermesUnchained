@@ -52,6 +52,7 @@ Commands:
   start PROMPT [ARGS...]  Run one explicit prompt and exit
   chat [HERMES_ARGS...]   Start an interactive, persistent Hermes chat
   claude [CLAUDE_ARGS...] Start Claude Code through the local OmniRoute bridge
+  aider [AIDER_ARGS...]   Start aider through the local OmniRoute bridge
   bridge                  Run the OmniRoute bridge in the foreground
   start-omniroute         Start only OmniRoute and wait for health
   stop                    Gracefully stop Hermes and OmniRoute
@@ -299,6 +300,36 @@ claude() {
   exec "$claude_bin" --model "$claude_model" "$@"
 }
 
+aider() {
+  print_banner
+  local aider_bin
+  aider_bin="$(type -P aider || true)"
+
+  if [[ -z "$aider_bin" ]]; then
+    echo "aider CLI not found. Installing aider-chat for you ..."
+    if command -v pipx >/dev/null 2>&1; then
+      pipx install aider-chat
+    else
+      require_command python3
+      python3 -m pip install --user aider-chat
+    fi
+    aider_bin="$(type -P aider || true)"
+    if [[ -z "$aider_bin" && -x "$HOME/.local/bin/aider" ]]; then
+      aider_bin="$HOME/.local/bin/aider"
+    fi
+  fi
+
+  if [[ -z "$aider_bin" ]]; then
+    echo "Error: aider installation completed, but 'aider' is not on PATH." >&2
+    exit 1
+  fi
+
+  export OPENAI_API_BASE="http://localhost:20128/v1"
+  export OPENAI_API_KEY="sk-dummy"
+  echo "Launching aider with openai/auto through $OPENAI_API_BASE"
+  exec "$aider_bin" --model openai/auto "$@"
+}
+
 run_bridge() {
   print_banner
   require_command docker
@@ -365,6 +396,7 @@ case "$command" in
   start) start_services "$@" ;;
   chat) start_chat "$@" ;;
   claude) claude "$@" ;;
+  aider) aider "$@" ;;
   bridge) run_bridge ;;
   start-omniroute)
     print_banner

@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 
-.PHONY: help setup start chat claude stop status logs clean rotate-logs service-install service-start service-stop service-logs
+.PHONY: help setup start chat claude aider stop status logs clean rotate-logs service-install service-start service-stop service-logs
 
 CLI := ./bin/hermes-unchained
 
@@ -11,6 +11,7 @@ help:
 	  '  make start PROMPT="..."  Run one prompt and exit' \
 	  '  make chat    Start an interactive Hermes chat' \
 	  '  make claude  Start Claude Code through the local OmniRoute bridge' \
+	  '  make aider   Start aider through the local OmniRoute bridge' \
 	  '  make stop    Stop Hermes and OmniRoute' \
 	  '  make status  Show runtime status' \
 	  '  make logs    Stream OmniRoute logs' \
@@ -38,6 +39,9 @@ chat:
 
 claude:
 	@$(CLI) claude
+
+aider:
+	@$(CLI) aider
 
 stop:
 	@$(CLI) stop
