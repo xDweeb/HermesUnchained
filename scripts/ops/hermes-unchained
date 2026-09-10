@@ -278,7 +278,7 @@ start_chat() {
 
 claude() {
   print_banner
-  local claude_bin
+  local claude_bin claude_model="openrouter/anthropic/claude-3-5-sonnet-20241022"
   claude_bin="$(type -P claude || true)"
 
   if [[ -z "$claude_bin" ]]; then
@@ -295,8 +295,8 @@ claude() {
 
   export ANTHROPIC_BASE_URL="http://localhost:20128/v1"
   export ANTHROPIC_API_KEY="sk-dummy"
-  echo "Launching Claude Code with anthropic/claude-opus-5 through $ANTHROPIC_BASE_URL"
-  exec "$claude_bin" --model "anthropic/claude-opus-5" "$@"
+  echo "Launching Claude Code with $claude_model through $ANTHROPIC_BASE_URL"
+  exec "$claude_bin" --model "$claude_model" "$@"
 }
 
 run_bridge() {
