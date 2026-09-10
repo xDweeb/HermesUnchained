@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 
-.PHONY: help setup start chat claude aider stop status logs clean rotate-logs service-install service-start service-stop service-logs
+.PHONY: help setup setup-ide start chat claude aider stop status logs clean rotate-logs service-install service-start service-stop service-logs
 
 CLI := ./bin/hermes-unchained
 
@@ -8,6 +8,7 @@ help:
 	@printf '%s\n' \
 	  'HermesUnchained commands:' \
 	  '  make setup   Create .env and verify dependencies' \
+	  '  make setup-ide  Generate the VS Code AI integration guide' \
 	  '  make start PROMPT="..."  Run one prompt and exit' \
 	  '  make chat    Start an interactive Hermes chat' \
 	  '  make claude  Start Claude Code through the local OmniRoute bridge' \
@@ -29,6 +30,9 @@ setup:
 	@command -v hermes-agent >/dev/null
 	@$(CLI) --version
 	@printf '%s\n' 'Setup complete. Review .env, then run make chat.'
+
+setup-ide:
+	@$(CLI) setup-ide
 
 start:
 	@test -n "$$PROMPT" || { printf '%s\n' 'Usage: make start PROMPT="your task"'; exit 2; }

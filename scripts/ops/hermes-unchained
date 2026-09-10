@@ -53,6 +53,7 @@ Commands:
   chat [HERMES_ARGS...]   Start an interactive, persistent Hermes chat
   claude [CLAUDE_ARGS...] Start Claude Code through the local OmniRoute bridge
   aider [AIDER_ARGS...]   Start aider through the local OmniRoute bridge
+  setup-ide               Generate the VS Code AI integration guide
   bridge                  Run the OmniRoute bridge in the foreground
   start-omniroute         Start only OmniRoute and wait for health
   stop                    Gracefully stop Hermes and OmniRoute
@@ -349,6 +350,75 @@ aider() {
   exec "$aider_bin" "${aider_args[@]}" "$@"
 }
 
+setup_ide() {
+  local guide_path="$PROJECT_ROOT/ide-config-guide.md"
+  cat >"$guide_path" <<'EOF'
+# HermesUnchained IDE Integration Guide
+
+This guide connects the Cline and Continue VS Code extensions to the local OmniRoute
+OpenAI-compatible bridge.
+
+## Before you begin
+
+1. Start OmniRoute and confirm it is listening on `http://localhost:20128`.
+2. Open this repository in VS Code.
+3. Use `auto` as the model so OmniRoute can select the appropriate backend.
+
+## Cline
+
+1. Install **Cline** from the VS Code Extensions view.
+2. Open Cline, select its settings gear, and choose **OpenAI Compatible** as the API provider.
+3. Set the Base URL to `http://localhost:20128/v1`.
+4. Set the API key to `sk-dummy` and the model ID to `auto`.
+5. Save the settings, then start a new Cline task.
+
+The equivalent Cline configuration is:
+
+```json
+{
+  "actModeApiProvider": "openai",
+  "planModeApiProvider": "openai",
+  "openAiBaseUrl": "http://localhost:20128/v1",
+  "openAiModelId": "auto",
+  "planModeOpenAiModelId": "auto"
+}
+```
+
+Cline stores its API key separately as a secret:
+
+```json
+{
+  "openAiApiKey": "sk-dummy"
+}
+```
+
+## Continue.dev
+
+1. Install **Continue - Codestral, Claude, and more** from the VS Code Extensions view.
+2. Open the Continue panel, open its configuration, and add the model entry below to the
+   `models` array. If starting from an empty JSON configuration, use the entire snippet.
+3. Save the configuration and reload VS Code if Continue does not refresh automatically.
+4. Select **HermesUnchained (OmniRoute)** in Continue's model picker.
+
+```json
+{
+  "models": [
+    {
+      "title": "HermesUnchained (OmniRoute)",
+      "provider": "openai",
+      "model": "auto",
+      "apiBase": "http://localhost:20128/v1",
+      "apiKey": "sk-dummy"
+    }
+  ]
+}
+```
+
+Both integrations now send OpenAI-compatible requests to the local OmniRoute bridge.
+EOF
+  echo "IDE integration guide generated! Please open ide-config-guide.md to link VS Code to HermesUnchained."
+}
+
 run_bridge() {
   print_banner
   require_command docker
@@ -416,6 +486,7 @@ case "$command" in
   chat) start_chat "$@" ;;
   claude) claude "$@" ;;
   aider) aider "$@" ;;
+  setup-ide) setup_ide ;;
   bridge) run_bridge ;;
   start-omniroute)
     print_banner
