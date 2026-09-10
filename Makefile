@@ -5,24 +5,31 @@
 CLI := ./bin/hermes-unchained
 
 help:
-	@printf '%s\n' \
-	  'HermesUnchained commands:' \
-	  '  make setup   Create .env and verify dependencies' \
-	  '  make setup-ide  Generate the VS Code AI integration guide' \
-	  '  make setup-skills  Generate Aider config and expert skill files' \
-	  '  make start PROMPT="..."  Run one prompt and exit' \
-	  '  make chat    Start an interactive Hermes chat' \
-	  '  make claude  Start Claude Code through the local OmniRoute bridge' \
-	  '  make aider   Start aider through the local OmniRoute bridge' \
-	  '  make stop    Stop Hermes and OmniRoute' \
-	  '  make status  Show runtime status' \
-	  '  make logs    Stream OmniRoute logs' \
-	  '  make clean   Remove runtime container (preserves data)' \
-	  '  make rotate-logs      Compress and expire Hermes log files' \
-	  '  make service-install  Install and enable the user systemd service' \
-	  '  make service-start    Start the background service' \
-	  '  make service-stop     Stop the background service' \
-	  '  make service-logs     Follow background service logs'
+	@echo "============================================================"
+	@echo "  HermesUnchained - Customized by xDweeb"
+	@echo "============================================================"
+	@echo ""
+	@echo "AI commands:"
+	@echo "  make chat         : Launch Hermes interactive chat"
+	@echo "  make claude       : Launch Claude Code CLI"
+	@echo "  make aider        : Launch Aider AI coding assistant (Supports MODE=web, backend, data, ctf, robotics)"
+	@echo "  make setup-ide    : Generate VS Code integration guide"
+	@echo "  make setup-skills : Initialize advanced AI skills and auto-linting"
+	@echo "  make help         : Show this help message"
+	@echo ""
+	@echo "Runtime and service commands:"
+	@echo "  make setup        : Create .env and verify dependencies"
+	@echo "  make start PROMPT=\"...\" : Run one prompt and exit"
+	@echo "  make status       : Show runtime status"
+	@echo "  make logs         : Stream OmniRoute logs"
+	@echo "  make stop         : Stop Hermes and OmniRoute"
+	@echo "  make clean        : Remove runtime container (preserves data)"
+	@echo "  make rotate-logs  : Compress and expire Hermes log files"
+	@echo "  make service-install : Install and enable the user systemd service"
+	@echo "  make service-start   : Start the background service"
+	@echo "  make service-stop    : Stop the background service"
+	@echo "  make service-logs    : Follow background service logs"
+	@echo ""
 
 setup:
 	@test -f .env || cp .env.example .env
