@@ -191,6 +191,7 @@ start_omniroute() {
       --name "$CONTAINER_NAME" \
       --restart unless-stopped \
       --stop-timeout 40 \
+      --env "OMNIROUTE_API_KEY=$DUMMY_KEY" \
       --publish "127.0.0.1:$OMNIROUTE_PORT:20128" \
       --volume "$PROJECT_ROOT/data:/app/data" \
       "$OMNIROUTE_IMAGE" >/dev/null
@@ -297,7 +298,7 @@ claude() {
   fi
 
   export ANTHROPIC_BASE_URL="http://localhost:20128/v1"
-  export ANTHROPIC_API_KEY="sk-dummy"
+  export ANTHROPIC_API_KEY="$DUMMY_KEY"
   echo "Launching Claude Code with $claude_model through $ANTHROPIC_BASE_URL"
   exec "$claude_bin" --model "$claude_model" "$@"
 }
@@ -325,7 +326,7 @@ aider() {
   fi
 
   export OPENAI_API_BASE="http://localhost:20128/v1"
-  export OPENAI_API_KEY="sk-dummy"
+  export OPENAI_API_KEY="$DUMMY_KEY"
   case "${MODE:-}" in
     ctf)
       context_msg="System: We are in CTF/Cybersecurity mode. Focus on penetration testing, "
